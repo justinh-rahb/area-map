@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Embeddable Map with MapLibre and Open Free Map</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <!-- MapLibre GL CSS -->
+    <link href="https://unpkg.com/maplibre-gl@^4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <!-- MapLibre GL JS -->
+    <script src="https://unpkg.com/maplibre-gl@^4.7.1/dist/maplibre-gl.js"></script>
+
+    <script>
+        var map = new maplibregl.Map({
+            container: 'map',
+            style: 'https://demotiles.maplibre.org/style.json', // style URL
+            center: [-80.169, 43.236],
+            zoom: 8
+        });
+
+        map.on('load', function() {
+            fetch('data.geojson')
+                .then(response => response.json())
+                .then(data => {
+                    // Add the GeoJSON data as a source
+                    map.addSource('geojson-data', {
+                        'type': 'geojson',
+                        'data': data
+                    });
+
+                    // Add a fill layer to display the polygons
+                    map.addLayer({
+                        'id': 'polygons-fill',
+                        'type': 'fill',
+                        'source': 'geojson-data',
+                        'layout': {},
+                        'paint': {
+                            'fill-color': '#088', // Fill color
+                            'fill-opacity': 0.5    // Fill opacity
+                        }
+                    });
+
+                    // Add an outline around the polygons
+                    map.addLayer({
+                        'id': 'polygons-outline',
+                        'type': 'line',
+                        'source': 'geojson-data',
+                        'layout': {},
+                        'paint': {
+                            'line-color': '#000', // Outline color
+                            'line-width': 2       // Outline width
+                        }
+                    });
+
+                    // Add a symbol layer for labels
+                    map.addLayer({
+                        'id': 'polygons-labels',
+                        'type': 'symbol',
+                        'source': 'geojson-data',
+                        'layout': {
+                            //'text-field': ['get', 'name'], // Use the 'name' property for labels
+                            //'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                            'text-size': 12,
+                            'text-anchor': 'center',
+                            'text-allow-overlap': true
+                        },
+                        'paint': {
+                            'text-color': '#000000'
+                        }
+                    });
+
+                    // Add interactivity: Show popup on click
+                    map.on('click', 'polygons-fill', function (e) {
+                        new maplibregl.Popup()
+                            .setLngLat(e.lngLat)
+                            .setHTML('<p>' + e.features[0].properties.name + '</p>')
+                            .addTo(map);
+                    });
+
+                    // Change the cursor to a pointer when over the polygons
+                    map.on('mouseenter', 'polygons-fill', function () {
+                        map.getCanvas().style.cursor = 'pointer';
+                    });
+
+                    // Change it back to default when not over
+                    map.on('mouseleave', 'polygons-fill', function () {
+                        map.getCanvas().style.cursor = '';
+                    });
+                })
+                .catch(error => console.error('Error loading GeoJSON:', error));
+        });
+    </script>
+</body>
+</html>
